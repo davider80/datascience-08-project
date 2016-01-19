@@ -1,0 +1,98 @@
+---
+title: "Data Science 08 - Project"
+author: "Davide Rivola"
+date: "19 January 2016"
+output: html_document
+---
+
+## Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement ??? a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Project goal
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+
+## Summary 
+
+After an exploratory data analysis we choose to use Random Forest classification.
+The algorithm performs well with an out-of-bag estimate of error rate of 0.28% and classification errors that varies between 0.0548% and 0.6355%. Validation test dataset has been verified in Coursera with a perfect match (20/20).
+
+## Description
+
+We load the datasets and remove rows with "new_window" = no.
+We factorize username and classes variables. We apply the Random Forest algorithm by using all non-empty variable, we select a sufficiently high number of trees.
+
+```{r, cache=TRUE, results='hide'}
+library(randomForest)
+set.seed(415)
+
+#Load data sets
+pml.testing <- read.csv("data/pml-testing.csv", stringsAsFactors=FALSE)
+pml.training <- read.csv("data/pml-training.csv", stringsAsFactors=FALSE)
+
+#Remove new_windows rows, factorize classes and username
+pml.training <- pml.training[pml.training$new_window=="no",]
+pml.training$classe <- as.factor(pml.training$classe)
+pml.training$user_name <- as.factor(pml.training$user_name)
+
+pml.testing <- pml.testing[pml.testing$new_window=="no",]
+pml.testing$user_name <- as.factor(pml.testing $user_name)
+
+#Apply randomforest algorithm to train dataset (we use all non empy variables)
+fit <- randomForest(classe ~ user_name+roll_belt+pitch_belt+yaw_belt+total_accel_belt+
+                        gyros_belt_x+gyros_belt_y+gyros_belt_z+accel_belt_x+accel_belt_y+          
+                        accel_belt_z+magnet_belt_x+magnet_belt_y+magnet_belt_z+roll_arm+              
+                        pitch_arm+yaw_arm+total_accel_arm+gyros_arm_x+gyros_arm_y+        
+                        gyros_arm_z+accel_arm_x+accel_arm_y+accel_arm_z+magnet_arm_x+
+                        magnet_arm_y+magnet_arm_z+roll_dumbbell+pitch_dumbbell+       
+                        yaw_dumbbell+total_accel_dumbbell+gyros_dumbbell_x+gyros_dumbbell_y+gyros_dumbbell_z+accel_dumbbell_x+       
+                        accel_dumbbell_y+accel_dumbbell_z+magnet_dumbbell_x+magnet_dumbbell_y+magnet_dumbbell_z+    
+                        roll_forearm+pitch_forearm+yaw_forearm+total_accel_forearm+gyros_forearm_x+gyros_forearm_y+
+                        gyros_forearm_z+accel_forearm_x+accel_forearm_y+accel_forearm_z+magnet_forearm_x+
+                        magnet_forearm_y+magnet_forearm_z, data=pml.training, importance=TRUE, ntree=500)
+```
+
+## Classification performance
+
+### Number of trees
+
+Number of trees (500) is sufficient for the selected number of variables. We see in the plot that after already 100 trees the error rates converge to stable values.
+
+```{r, echo=FALSE}
+plot(fit)
+```
+
+### Out-of-bag (oob) error estimate
+
+In random forests, there is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally, during the run.
+
+The algorithm performs well with an OOB estimate of error rate of 0.28% and classification errors that varies between 0.0548% and 0.6355%. 
+
+```{r}
+print(fit)
+```
+
+### Importance of variables
+
+By plotting the importance of variables we can see that the first four are more significant:
+
+1. yaw_belt
+2. roll_belt
+3. magnet_dumpbell_z
+4. pitch_belt
+
+The other variables are less important but still they have significant performance.
+
+```{r, echo=FALSE}
+varImpPlot(fit)
+```
+
+## Algorithm prediction
+
+The algorithm predicts the following classes for the given 20 validation observations.
+Prediction have been verified in Coursera with a perfect match (20/20).
+
+```{r}
+predict(fit, pml.testing)
+```
